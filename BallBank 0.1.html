@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Bank of Баллы — demo с админкой</title>
+<style>
+  :root{
+    --bg:#0f1724;
+    --card:#0b1220;
+    --accent:#7c3aed;
+    --accent-2:#06b6d4;
+    --glass: rgba(255,255,255,0.04);
+    --text:#e6eef8;
+    --muted: #9fb0c8;
+    --success: #10b981;
+    --danger: #ef4444;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: radial-gradient(1000px 600px at 10% 10%, rgba(124,58,237,0.12), transparent),
+                radial-gradient(800px 500px at 90% 90%, rgba(6,182,212,0.06), transparent),
+                var(--bg);
+    color:var(--text);
+    padding:28px;
+  }
+  .wrap{max-width:1100px;margin:24px auto;display:grid;grid-template-columns:1fr 380px;gap:22px}
+  header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:56px;height:56px;background:linear-gradient(135deg,var(--accent),var(--accent-2));border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:white}
+  h1{font-size:20px;margin:0}
+  p.lead{margin:0;color:var(--muted);font-size:13px}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:14px;box-shadow: 0 6px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+  .balance-panel{padding:22px;display:flex;gap:18px;align-items:center;justify-content:space-between}
+  .balance-label{color:var(--muted);font-size:13px}
+  .balance-value{font-weight:800;font-size:34px;display:flex;gap:8px;align-items:center}
+  .unit{font-size:14px;color:var(--muted);font-weight:600;background:var(--glass);padding:6px 9px;border-radius:999px}
+  .buttons-row{display:flex;gap:10px;margin-top:14px}
+  .btn{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);padding:10px 14px;border-radius:10px;cursor:pointer;color:var(--text);font-weight:600;transition:transform .12s ease}
+  .btn:hover{transform:translateY(-3px)}
+  .btn-primary{background: linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow: 0 8px 30px rgba(124,58,237,0.18);border:none;color:white}
+  .btn-ghost{background:transparent;border:1px dashed rgba(255,255,255,0.04)}
+  .promo{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  input[type="text"], input[type="number"]{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:rgba(255,255,255,0.02);color:var(--text);outline:none}
+  .right-col{display:flex;flex-direction:column;gap:16px;position:relative}
+  .transactions{max-height:340px;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .tx{display:flex;justify-content:space-between;gap:12px;background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+  .tx .badge{padding:6px 10px;border-radius:999px;font-weight:700}
+  .tx.plus .badge{background:rgba(16,185,129,0.12); color:var(--success)}
+  .tx.minus .badge{background:rgba(239,68,68,0.08); color:var(--danger)}
+  .muted-small{color:var(--muted);font-size:13px}
+  footer.tools{grid-column:1/-1;display:flex;gap:12px;margin-top:6px;align-items:center;justify-content:flex-end}
+  .used-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .used-item{background:rgba(255,255,255,0.02);padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.02);font-weight:700;color:var(--muted);font-size:13px}
+  @media (max-width:920px){.wrap{grid-template-columns:1fr;padding:12px}.right-col{order:2}}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:28px;background:linear-gradient(90deg,var(--accent),var(--accent-2));padding:12px 18px;border-radius:10px;color:white;font-weight:700;box-shadow:0 12px 40px rgba(12,18,30,0.6);display:none;z-index:30}
+  .toast.show{display:block; animation:pop .35s ease}
+  @keyframes pop{from{transform:translateX(-50%) translateY(8px) scale(.98);opacity:0} to{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
+  /* admin panel styles */
+  .admin-panel{display:none;flex-direction:column;gap:10px}
+  .admin-panel.show{display:flex}
+  .admin-row{display:flex;gap:8px;align-items:center}
+  .code-item{display:flex;justify-content:space-between;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02)}
+  .small{font-size:13px;color:var(--muted)}
+  .login-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:200;display:none}
+  .login-modal.show{display:flex}
+  .login-card{width:360px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:12px}
+  .link-like{background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">B</div>
+        <div>
+          <h1>Bank of Баллы — демо</h1>
+          <p class="lead">Виртуальный кошелёк с промокодами. Только для теста.</p>
+        </div>
+      </div>
+
+      <div style="text-align:right">
+        <div class="muted-small">Пользователь: <strong id="userName">Гость</strong></div>
+        <div class="muted-small">ID кошелька: <strong id="walletId">—</strong></div>
+        <div style="margin-top:8px">
+          <button class="btn" id="btnLogin">Войти</button>
+          <button class="btn" id="btnLogout" style="display:none">Выйти</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="card">
+      <div class="balance-panel">
+        <div>
+          <div class="balance-label">Доступный баланс</div>
+          <div class="balance-value"><span id="balance">0</span><span class="unit">баллы</span></div>
+          <div class="buttons-row">
+            <button class="btn btn-primary" id="addDemo">+ Пополнить (демо)</button>
+            <button class="btn btn-ghost" id="withdrawDemo">− Снять (демо)</button>
+          </div>
+        </div>
+
+        <div style="min-width:260px">
+          <div class="muted-small">Супер-промокоды</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <div class="card" style="padding:10px;border-radius:10px;flex:1">
+              <div style="font-weight:800">666</div>
+              <div class="muted-small">+1 000 000 баллов</div>
+            </div>
+            <div class="card" style="padding:10px;border-radius:10px;width:120px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center">
+              <div style="font-weight:800">7× Promo</div>
+              <div class="muted-small">+37 000 баллов</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section style="margin-top:12px" class="promo">
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="promoInput" placeholder="Введите промокод (напр. 992)" />
+          <button class="btn btn-primary" id="applyPromo">Использовать</button>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between">
+          <div class="hint small">Коды по умолчанию: <strong>992,299,603,384,973,280,444</strong> — по 37 000; <strong>666</strong> — 1 000 000.</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" id="showCodes">Показать коды</button>
+            <button class="btn" id="clearUsed">Сброс использованных</button>
+          </div>
+        </div>
+
+        <div class="used-list" id="usedList" aria-live="polite"></div>
+      </section>
+
+      <!-- admin panel inside main for visibility -->
+      <section style="margin-top:16px" class="card admin-panel" id="adminPanel">
+        <strong>Админ-панель</strong>
+        <div class="small">Только для администратора — создание и управление промокодами.</div>
+
+        <div class="admin-row" style="margin-top:10px">
+          <input id="newCode" placeholder="Код (напр. ABC123)" />
+          <input id="newAmount" type="number" placeholder="Сумма (число)" />
+          <input id="newMax" type="number" placeholder="Макс использований (0 = бесконечно)" />
+          <button class="btn btn-primary" id="addCodeBtn">Добавить</button>
+        </div>
+
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <input id="bulkPrefix" placeholder="Префикс для генерации (напр. P-)" />
+          <input id="bulkCount" type="number" placeholder="Кол-во" style="width:100px"/>
+          <input id="bulkAmount" type="number" placeholder="Сумма" style="width:120px"/>
+          <button class="btn" id="bulkGen">Массовая генерация</button>
+        </div>
+
+        <div style="margin-top:12px">
+          <strong>Список промокодов</strong>
+          <div id="codesList" style="margin-top:8px;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto"></div>
+        </div>
+
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" id="exportPromos">Экспорт промокодов</button>
+          <button class="btn" id="importPromos">Импорт (заменить)</button>
+          <button class="btn btn-ghost" id="resetPromos">Сброс промокодов к дефолту</button>
+        </div>
+      </section>
+    </main>
+
+    <aside class="right-col">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <strong>История транзакций</strong>
+            <div class="muted-small">Последние операции</div>
+          </div>
+          <div class="muted-small">Баллы — внутренняя валюта</div>
+        </div>
+        <div class="transactions" id="transactions" aria-live="polite"></div>
+      </div>
+
+      <div class="card">
+        <strong>Инструменты</strong>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-direction:column">
+          <div class="muted-small">ID кошелька генерируется автоматически и сохраняется в браузере.</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" id="exportData">Экспорт данных</button>
+            <button class="btn" id="importData">Импорт (заменить)</button>
+            <button class="btn" id="resetAll">Полный сброс</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <footer class="tools">
+      <div class="muted-small">Это демо-страница — никакие реальные деньги не используются.</div>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- login modal -->
+  <div class="login-modal" id="loginModal">
+    <div class="login-card card">
+      <h3 style="margin-top:0">Вход администратора</h3>
+      <div class="small">Используй: логин <strong>Admin</strong> и пароль <strong>qwe123ewq</strong> (демо).</div>
+      <div style="margin-top:10px">
+        <input id="loginUser" placeholder="Логин" />
+      </div>
+      <div style="margin-top:8px">
+        <input id="loginPass" placeholder="Пароль" type="password" />
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" id="loginCancel">Отмена</button>
+        <button class="btn btn-primary" id="loginSubmit">Войти</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  /* -------------------------
+     Конфигурация и ключи
+     ------------------------- */
+  const DEFAULT_PROMOS = {
+    // предзаполненные коды (из вашего списка)
+    '992': {amount:37000, maxUses:1, used:0},
+    '299': {amount:37000, maxUses:1, used:0},
+    '603': {amount:37000, maxUses:1, used:0},
+    '384': {amount:37000, maxUses:1, used:0},
+    '973': {amount:37000, maxUses:1, used:0},
+    '280': {amount:37000, maxUses:1, used:0},
+    '444': {amount:37000, maxUses:1, used:0},
+    '666': {amount:1000000, maxUses:1, used:0}
+  };
+
+  const KEY_BALANCE = 'demo_balance_v1';
+  const KEY_USED = 'demo_used_promos_v1';
+  const KEY_TX = 'demo_transactions_v1';
+  const KEY_WID = 'demo_wallet_id_v1';
+  const KEY_NAME = 'demo_user_name_v1';
+  const KEY_PROMOS = 'demo_promos_v1';
+  const KEY_IS_ADMIN = 'demo_is_admin_v1';
+
+  const ADMIN_USER = 'Admin';
+  const ADMIN_PASS = 'qwe123ewq'; // демо пароль (пользователь дал)
+
+  /* -------------------------
+     DOM элементы
+     ------------------------- */
+  const balanceEl = document.getElementById('balance');
+  const promoInput = document.getElementById('promoInput');
+  const applyBtn = document.getElementById('applyPromo');
+  const usedList = document.getElementById('usedList');
+  const txList = document.getElementById('transactions');
+  const toast = document.getElementById('toast');
+  const walletIdEl = document.getElementById('walletId');
+  const userNameEl = document.getElementById('userName');
+  const btnLogin = document.getElementById('btnLogin');
+  const btnLogout = document.getElementById('btnLogout');
+  const loginModal = document.getElementById('loginModal');
+  const loginUser = document.getElementById('loginUser');
+  const loginPass = document.getElementById('loginPass');
+  const loginSubmit = document.getElementById('loginSubmit');
+  const loginCancel = document.getElementById('loginCancel');
+  const adminPanel = document.getElementById('adminPanel');
+  const addCodeBtn = document.getElementById('addCodeBtn');
+  const newCode = document.getElementById('newCode');
+  const newAmount = document.getElementById('newAmount');
+  const newMax = document.getElementById('newMax');
+  const codesList = document.getElementById('codesList');
+  const bulkGen = document.getElementById('bulkGen');
+  const bulkPrefix = document.getElementById('bulkPrefix');
+  const bulkCount = document.getElementById('bulkCount');
+  const bulkAmount = document.getElementById('bulkAmount');
+  const showCodesBtn = document.getElementById('showCodes');
+  const clearUsedBtn = document.getElementById('clearUsed');
+  const exportPromos = document.getElementById('exportPromos');
+  const importPromos = document.getElementById('importPromos');
+  const resetPromos = document.getElementById('resetPromos');
+
+  /* -------------------------
+     Вспомогательные функции
+     ------------------------- */
+  function loadJSON(key, fallback){
+    try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch(e){ return fallback; }
+  }
+  function saveJSON(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+  function uid(len=6){
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s=''; for(let i=0;i<len;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+    return s;
+  }
+
+  function showToast(msg, ms=2000){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=> toast.classList.remove('show'), ms);
+  }
+
+  /* -------------------------
+     State init
+     ------------------------- */
+  let balance = loadJSON(KEY_BALANCE, 0);
+  let used = loadJSON(KEY_USED, []); // список отдельных применённых кодов (для UI)
+  let tx = loadJSON(KEY_TX, []);
+  let wid = loadJSON(KEY_WID, null);
+  let uname = loadJSON(KEY_NAME, 'Гость');
+  let promos = loadJSON(KEY_PROMOS, null);
+  let isAdmin = loadJSON(KEY_IS_ADMIN, false);
+
+  if(!promos){ promos = Object.assign({}, DEFAULT_PROMOS); saveJSON(KEY_PROMOS, promos); }
+  if(!wid){ wid = 'W-' + uid(10); saveJSON(KEY_WID, wid); }
+  walletIdEl.textContent = wid;
+  userNameEl.textContent = uname;
+
+  /* -------------------------
+     Renderers
+     ------------------------- */
+  function renderBalance(animated=true){
+    const start = Number(balanceEl.dataset.current || 0);
+    const end = Number(balance);
+    balanceEl.dataset.current = end;
+    if(!animated){ balanceEl.textContent = end.toLocaleString('ru-RU'); return; }
+    const duration = 500;
+    const frameRate = 30;
+    const frames = Math.round(duration / (1000/frameRate));
+    let frame = 0;
+    const diff = end - start;
+    if(diff === 0){ balanceEl.textContent = end.toLocaleString('ru-RU'); return;}
+    const timer = setInterval(()=>{
+      frame++;
+      const progress = frame/frames;
+      const ease = 1 - Math.pow(1-progress, 3);
+      const val = Math.round(start + diff * ease);
+      balanceEl.textContent = val.toLocaleString('ru-RU');
+      if(frame >= frames){ clearInterval(timer); balanceEl.textContent = end.toLocaleString('ru-RU'); }
+    }, 1000/frameRate);
+  }
+
+  function renderUsed(){
+    usedList.innerHTML = '';
+    if(used.length === 0){ usedList.innerHTML = '<div class="muted-small">Промокоды ещё не использованы</div>'; return; }
+    used.forEach(code=>{
+      const el = document.createElement('div'); el.className='used-item'; el.textContent = code; usedList.appendChild(el);
+    });
+  }
+
+  function renderTx(){
+    txList.innerHTML = '';
+    if(tx.length === 0){ txList.innerHTML = '<div class="muted-small">Транзакций пока нет</div>'; return; }
+    tx.slice().reverse().forEach(item=>{
+      const div = document.createElement('div'); div.className = 'tx ' + (item.amount>0 ? 'plus' : 'minus');
+      div.innerHTML = `<div class="left"><div style="display:flex;flex-direction:column"><strong>${item.title}</strong><small>${new Date(item.date).toLocaleString('ru-RU')}</small></div></div>
+                       <div style="text-align:right"><div class="badge">${item.amount>0?'+':'−'} ${Math.abs(item.amount).toLocaleString('ru-RU')}</div><small class="muted-small">${item.note||''}</small></div>`;
+      txList.appendChild(div);
+    });
+  }
+
+  function renderPromos(){
+    codesList.innerHTML = '';
+    const entries = Object.entries(promos).sort((a,b)=> b[1].amount - a[1].amount);
+    if(entries.length === 0){ codesList.innerHTML = '<div class="small">Промокодов нет</div>'; return; }
+    entries.forEach(([code, meta])=>{
+      const el = document.createElement('div'); el.className='code-item';
+      const left = document.createElement('div'); left.style.display='flex';left.style.flexDirection='column';
+      left.innerHTML = `<strong>${code}</strong><div class="small">Сумма: ${meta.amount.toLocaleString('ru-RU')} | Использовано: ${meta.used || 0}${meta.maxUses>0 ? ' / ' + meta.maxUses : ' / ∞'}</div>`;
+      const right = document.createElement('div'); right.style.display='flex'; right.style.gap='8px';
+      const btnUse = document.createElement('button'); btnUse.className='btn'; btnUse.textContent='Применить (тест)'; // админ может применить себе
+      btnUse.onclick = ()=> applyPromo(code, true);
+      const btnReset = document.createElement('button'); btnReset.className='btn'; btnReset.textContent='Сброс счётчика';
+      btnReset.onclick = ()=> { if(!confirm('Сбросить счётчик использований для '+code+'?')) return; promos[code].used = 0; saveJSON(KEY_PROMOS,promos); renderPromos(); showToast('Счётчик сброшен'); };
+      const btnDel = document.createElement('button'); btnDel.className='btn btn-ghost'; btnDel.textContent='Удалить';
+      btnDel.onclick = ()=> { if(!confirm('Удалить промокод '+code+'?')) return; delete promos[code]; saveJSON(KEY_PROMOS,promos); renderPromos(); showToast('Промокод удалён'); };
+      right.appendChild(btnUse); right.appendChild(btnReset); right.appendChild(btnDel);
+      el.appendChild(left); el.appendChild(right); codesList.appendChild(el);
+    });
+  }
+
+  function pushTx(title, amount, note){
+    tx.push({title, amount, note, date: Date.now()});
+    if(tx.length > 500) tx = tx.slice(tx.length-500);
+    saveJSON(KEY_TX, tx);
+    renderTx();
+  }
+
+  /* -------------------------
+     Promo application logic
+     ------------------------- */
+  function canUsePromo(code){
+    if(!promos[code]) return false;
+    const meta = promos[code];
+    if(typeof meta.maxUses === 'number' && meta.maxUses > 0){
+      return (meta.used || 0) < meta.maxUses;
+    }
+    return true;
+  }
+
+  function applyPromo(code, bypassUsedList=false){
+    code = String(code).trim();
+    if(!code){ showToast('Введите код', 1400); return; }
+    if(!promos[code]){ showToast('Промокод не найден', 1800); return; }
+    if(!canUsePromo(code)){ showToast('Промокод исчерпан', 1600); return; }
+
+    // если пользователь уже использовал этот код (обычный режим), не даём повторно
+    if(!bypassUsedList && used.includes(code)){
+      showToast('Вы уже использовали этот код в этом браузере', 1800); return;
+    }
+
+    const amount = Number(promos[code].amount || 0);
+    promos[code].used = (promos[code].used || 0) + 1;
+    balance = Number(balance) + amount;
+    used.push(code);
+    saveState();
+    saveJSON(KEY_PROMOS, promos);
+    renderBalance(true);
+    renderUsed();
+    renderPromos();
+    pushTx('Промокод '+code, +amount, 'Промокод применён');
+    showToast(`+${amount.toLocaleString('ru-RU')} баллов`);
+    showConfettiSmall();
+  }
+
+  /* -------------------------
+     State save
+     ------------------------- */
+  function saveState(){ saveJSON(KEY_BALANCE, balance); saveJSON(KEY_USED, used); saveJSON(KEY_TX, tx); saveJSON(KEY_WID, wid); saveJSON(KEY_NAME, uname); saveJSON(KEY_IS_ADMIN, isAdmin); }
+
+  /* -------------------------
+     UI Events
+     ------------------------- */
+  document.getElementById('addDemo').addEventListener('click', ()=>{
+    const demo = 5000 + Math.floor(Math.random()*20000);
+    balance = Number(balance) + demo; saveState(); renderBalance(true); pushTx('Демо пополнение', +demo, 'Тестовая транзакция'); showToast(`+${demo.toLocaleString('ru-RU')} баллов`);
+  });
+  document.getElementById('withdrawDemo').addEventListener('click', ()=>{
+    const amt = 1000 + Math.floor(Math.random()*3000);
+    if(balance < amt){ showToast('Недостаточно баллов', 1600); return; }
+    balance = Number(balance) - amt; saveState(); renderBalance(true); pushTx('Демо вывод', -amt, 'Тестовая транзакция'); showToast(`−${amt.toLocaleString('ru-RU')} баллов`);
+  });
+
+  applyBtn.addEventListener('click', ()=>{ applyPromo(promoInput.value, false); promoInput.value=''; });
+  promoInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ applyPromo(promoInput.value,false); promoInput.value=''; } });
+
+  showCodesBtn.addEventListener('click', ()=>{
+    const all = Object.keys(promos).join(', ');
+    alert('Доступные коды:\\n\\n' + all);
+  });
+
+  clearUsedBtn.addEventListener('click', ()=>{
+    if(!confirm('Удалить список использованных промокодов для этого браузера?')) return;
+    used = []; saveState(); renderUsed(); showToast('Использованные промокоды сброшены',1500);
+  });
+
+  // export/import data
+  document.getElementById('exportData').addEventListener('click', ()=>{
+    const payload = {walletId: wid, balance, used, tx, promos};
+    const dataStr = JSON.stringify(payload, null, 2);
+    const blob = new Blob([dataStr], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='bank-bally-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); showToast('Экспорт создан');
+  });
+  document.getElementById('importData').addEventListener('click', ()=>{
+    const json = prompt('Вставьте JSON (заменит баланс, использованные коды, историю и промокоды). Отмена — отмена.');
+    if(!json) return;
+    try{
+      const obj = JSON.parse(json);
+      if(typeof obj.balance === 'number') balance = obj.balance;
+      used = Array.isArray(obj.used) ? obj.used : [];
+      tx = Array.isArray(obj.tx) ? obj.tx : [];
+      if(typeof obj.promos === 'object' && obj.promos !== null) promos = obj.promos;
+      saveState(); saveJSON(KEY_PROMOS, promos); renderBalance(false); renderUsed(); renderTx(); renderPromos(); showToast('Данные импортированы');
+    }catch(e){ showToast('Ошибка импорта: неверный формат',2200); }
+  });
+
+  document.getElementById('resetAll').addEventListener('click', ()=>{
+    if(!confirm('Полный сброс всех данных в этом браузере?')) return;
+    localStorage.removeItem(KEY_BALANCE); localStorage.removeItem(KEY_USED); localStorage.removeItem(KEY_TX); localStorage.removeItem(KEY_WID); localStorage.removeItem(KEY_NAME); localStorage.removeItem(KEY_PROMOS); localStorage.removeItem(KEY_IS_ADMIN);
+    location.reload();
+  });
+
+  /* -------------------------
+     Admin: добавить код
+     ------------------------- */
+  addCodeBtn.addEventListener('click', ()=>{
+    const code = String(newCode.value).trim();
+    const amount = Number(newAmount.value) || 0;
+    const max = Number(newMax.value) || 0;
+    if(!code || amount <= 0){ showToast('Введите код и сумму > 0',1600); return; }
+    promos[code] = {amount:amount, maxUses: max, used:0};
+    saveJSON(KEY_PROMOS, promos);
+    newCode.value=''; newAmount.value=''; newMax.value='';
+    renderPromos(); showToast('Промокод добавлен');
+  });
+
+  bulkGen.addEventListener('click', ()=>{
+    const prefix = String(bulkPrefix.value || '').trim();
+    let count = Number(bulkCount.value) || 0;
+    const amount = Number(bulkAmount.value) || 0;
+    if(count <= 0 || amount <= 0){ showToast('Укажите корректный кол-во и сумму',1600); return; }
+    for(let i=0;i<count;i++){
+      const code = prefix + uid(6) + Math.floor(Math.random()*900).toString();
+      promos[code] = {amount:amount, maxUses:1, used:0};
+    }
+    saveJSON(KEY_PROMOS,promos);
+    bulkPrefix.value=''; bulkCount.value=''; bulkAmount.value='';
+    renderPromos(); showToast('Сгенерировано '+count+' кодов');
+  });
+
+  exportPromos.addEventListener('click', ()=>{
+    const data = JSON.stringify(promos, null, 2);
+    const blob = new Blob([data], {type:'application/json'});
+    const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='promos.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); showToast('Промокоды экспортированы');
+  });
+
+  importPromos.addEventListener('click', ()=>{
+    const json = prompt('Вставьте JSON (заменит все промокоды). Отмена — отмена.');
+    if(!json) return;
+    try{ const obj = JSON.parse(json); promos = obj; saveJSON(KEY_PROMOS,promos); renderPromos(); showToast('Промокоды импортированы'); } catch(e){ showToast('Ошибка импорта',1800); }
+  });
+
+  resetPromos.addEventListener('click', ()=>{
+    if(!confirm('Сбросить промокоды к дефолту? Это удалит все созданные ранее.')) return;
+    promos = Object.assign({}, DEFAULT_PROMOS); saveJSON(KEY_PROMOS, promos); renderPromos(); showToast('Промокоды сброшены к дефолту');
+  });
+
+  /* -------------------------
+     Login / Logout
+     ------------------------- */
+  btnLogin.addEventListener('click', ()=>{ loginModal.classList.add('show'); loginUser.value=''; loginPass.value=''; loginUser.focus(); });
+  loginCancel.addEventListener('click', ()=>{ loginModal.classList.remove('show'); });
+  loginSubmit.addEventListener('click', doLogin);
+  loginPass.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
+
+  function doLogin(){
+    const u = String(loginUser.value || '').trim();
+    const p = String(loginPass.value || '');
+    if(u === ADMIN_USER && p === ADMIN_PASS){
+      isAdmin = true; uname = 'Admin'; saveState(); loginModal.classList.remove('show'); showToast('Вход выполнен как Admin');
+      applyAdminUI(true);
+    } else {
+      showToast('Неверный логин или пароль', 1800);
+    }
+  }
+
+  btnLogout.addEventListener('click', ()=>{
+    if(!confirm('Выйти из аккаунта?')) return;
+    isAdmin = false; uname = 'Гость'; saveState(); applyAdminUI(false); showToast('Вы вышли');
+  });
+
+  function applyAdminUI(state){
+    if(state){
+      adminPanel.classList.add('show');
+      btnLogin.style.display='none'; btnLogout.style.display='';
+      userNameEl.textContent = 'Admin';
+    } else {
+      adminPanel.classList.remove('show');
+      btnLogin.style.display=''; btnLogout.style.display='none';
+      userNameEl.textContent = 'Гость';
+    }
+    renderPromos();
+  }
+
+  /* -------------------------
+     Small confetti
+     ------------------------- */
+  function showConfettiSmall(){
+    const el = document.createElement('div');
+    el.style.position = 'fixed'; el.style.left='50%'; el.style.top='20%'; el.style.transform='translateX(-50%)'; el.style.pointerEvents='none'; el.style.zIndex=9999;
+    const colors = ['#7c3aed','#06b6d4','#f59e0b','#10b981','#ef4444'];
+    for(let i=0;i<18;i++){
+      const dot = document.createElement('div');
+      const size = 6 + Math.random()*8;
+      dot.style.width = size + 'px'; dot.style.height = size + 'px'; dot.style.borderRadius='50%';
+      dot.style.position='absolute'; dot.style.left=(50 + (Math.random()-0.5)*300)+'px'; dot.style.top=(20 + Math.random()*40)+'px';
+      dot.style.background = colors[Math.floor(Math.random()*colors.length)]; dot.style.opacity='0.95'; dot.style.transform='translateY(0) scale(0.9)';
+      dot.style.transition = 'transform 800ms cubic-bezier(.12,.9,.4,1), opacity 900ms';
+      el.appendChild(dot);
+      setTimeout(()=>{ const x=(Math.random()-0.5)*800; const y=120+Math.random()*200; dot.style.transform = `translate(${x}px, ${y}px) scale(1)`; dot.style.opacity='0'; }, 10 + Math.random()*80);
+    }
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), 950);
+  }
+
+  /* -------------------------
+     Initial render & admin state
+     ------------------------- */
+  renderBalance(false);
+  renderUsed();
+  renderTx();
+  renderPromos();
+  applyAdminUI(isAdmin);
+
+  // keyboard shortcuts
+  document.addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key.toLowerCase() === 'p'){ e.preventDefault(); promoInput.focus(); } });
+
+  // expose for console
+  window.applyPromoCode = applyPromo;
+})();
+</script>
+</body>
+</html>
