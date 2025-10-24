@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bank of Баллы — demo с админкой</title>
+<title>Bank of Баллы</title>
 <style>
   :root{
     --bg:#0f1724;
@@ -77,8 +77,8 @@
       <div class="brand">
         <div class="logo">B</div>
         <div>
-          <h1>Bank of Баллы — демо</h1>
-          <p class="lead">Виртуальный кошелёк с промокодами. Только для теста.</p>
+          <h1>Bank of Баллы</h1>
+          <p class="lead">Виртуальный кошелёк с промокодами.</p>
         </div>
       </div>
 
@@ -98,8 +98,7 @@
           <div class="balance-label">Доступный баланс</div>
           <div class="balance-value"><span id="balance">0</span><span class="unit">баллы</span></div>
           <div class="buttons-row">
-            <button class="btn btn-primary" id="addDemo">+ Пополнить (демо)</button>
-            <button class="btn btn-ghost" id="withdrawDemo">− Снять (демо)</button>
+            <button class="btn btn-ghost" id="withdrawDemo">− Перевести на рандомный счёт)</button>
           </div>
         </div>
 
@@ -107,7 +106,7 @@
           <div class="muted-small">Супер-промокоды</div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <div class="card" style="padding:10px;border-radius:10px;flex:1">
-              <div style="font-weight:800">666</div>
+              <div style="font-weight:800">1x Promo</div>
               <div class="muted-small">+1 000 000 баллов</div>
             </div>
             <div class="card" style="padding:10px;border-radius:10px;width:120px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center">
@@ -124,7 +123,7 @@
           <button class="btn btn-primary" id="applyPromo">Использовать</button>
         </div>
         <div style="display:flex;gap:10px;align-items:center;justify-content:space-between">
-          <div class="hint small">Коды по умолчанию: <strong>992,299,603,384,973,280,444</strong> — по 37 000; <strong>666</strong> — 1 000 000.</div>
+          <div class="hint small">Коды по умолчанию: <strong>###,###,###,###,###,###,###</strong> — по 37 000; <strong>##6</strong> — 1 000 000.</div>
           <div style="display:flex;gap:8px">
             <button class="btn" id="showCodes">Показать коды</button>
             <button class="btn" id="clearUsed">Сброс использованных</button>
@@ -192,7 +191,6 @@
     </aside>
 
     <footer class="tools">
-      <div class="muted-small">Это демо-страница — никакие реальные деньги не используются.</div>
     </footer>
   </div>
 
